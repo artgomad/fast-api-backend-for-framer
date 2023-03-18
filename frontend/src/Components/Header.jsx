@@ -1,21 +1,13 @@
 import React from "react";
-import { Heading, Flex, Divider } from "@chakra-ui/react";
 
 const Header = () => {
   return (
-      <Flex
-          as="nav"
-          align="center"
-          justify="space-between"
-          wrap="wrap"
-          padding="0.5rem"
-          bg="gray.400"
-      >
-        <Flex align="center" mr={5}>
-          <Heading as="h1" size="sm">Todos</Heading>
-          <Divider />
-        </Flex>
-      </Flex>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem", backgroundColor: "gray" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <h1 style={{ fontSize: "1rem", marginRight: "0.5rem" }}>Todos</h1>
+        <hr style={{ height: "1px", width: "100%", backgroundColor: "black", border: "none", margin: 0 }} />
+      </div>
+    </nav>
   );
 };
 

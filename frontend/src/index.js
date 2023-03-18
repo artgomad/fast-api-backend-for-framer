@@ -1,16 +1,16 @@
 import React from "react";
 import { render } from 'react-dom';
-import { ChakraProvider } from "@chakra-ui/core";
 
-import Header from "./Components/Header";
-import Todos from "./Components/Todos";
+import Header from "./components/Header";
+import Todos from "./components/Todos";
 
 function App() {
   return (
-    <ChakraProvider>
+    <>
       <Header />
       <Todos />
-    </ChakraProvider>
+     
+    </>
   )
 }
 
