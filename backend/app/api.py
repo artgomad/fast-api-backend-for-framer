@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import openai
+
 """
 from langchain.document_loaders import PagedPDFSplitter
 from langchain.vectorstores import FAISS
@@ -86,6 +88,25 @@ async def delete_todo(id: int) -> dict:
     return {
         "data": f"Todo with id {id} not found."
     }
+
+
+
+
+@app.post("/question", tags=["openAI"])
+async def openAI_chatbot(chatlog: list):
+
+    return {
+        "data": openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            temperature=0,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+            messages=chatlog,
+        )
+    }
+
+
 """
 loader = PagedPDFSplitter("nl-employee-handbook-local-v12-0.pdf")
 pages = loader.load_and_split()
