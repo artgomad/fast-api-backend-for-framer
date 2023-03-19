@@ -164,6 +164,7 @@ export default function Todos() {
   const fetchTodos = async () => {
     const response = await fetch("http://localhost:8000/todo");
     const todos = await response.json();
+    console.log(todos.data)
     setTodos(todos.data);
   };
   useEffect(() => {
@@ -174,7 +175,7 @@ export default function Todos() {
       <AddTodo />
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
         {todos.map((todo) => (
-          <TodoHelper item={todo.item} id={todo.id} fetchTodos={fetchTodos} />
+          <TodoHelper item={todo.item} id={todo.id} key={todo.id} fetchTodos={fetchTodos} />
         ))}
       </div>
     </TodosContext.Provider>

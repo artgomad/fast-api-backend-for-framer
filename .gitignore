@@ -4,3 +4,6 @@ build/
 venv/
 env/
 __pycache__
+
+# local env files
+.env*.local
