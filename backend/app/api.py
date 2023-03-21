@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import openai
+import os
+import pickle
 
 """
 from langchain.document_loaders import PagedPDFSplitter
@@ -90,20 +92,47 @@ async def delete_todo(id: int) -> dict:
     }
 
 
-
-
 @app.post("/question", tags=["openAI"])
 async def openAI_chatbot(chatlog: list):
+    vectorstores_dir = os.path.abspath('vectorstores')
+    if "vectorstore_faqs_ing.pkl" in os.listdir(vectorstores_dir):
+        print("Found vectorstore in " + vectorstores_dir)
+        with open(vectorstores_dir + "/vectorstore_faqs_ing.pkl", "rb") as f:
+            vectorstore = pickle.load(f)
+            print("loading vectorstore...")
+    else:
+        print("vectorstore not found")
+
+    user_question = chatlog[-1]['content']
+    print('User question: ' + user_question)
+
+    # Get the top 5 documents from the vectorstore
+    # similarity_search() is being retreived from langchain.vectorstores.faiss
+    docs = vectorstore.similarity_search(user_question, 5)
+    docs_headers = ""
+    docs_content = ""
+    for doc in docs:
+        print(doc.metadata)
+        docs_headers += "- " + doc.metadata["heading"] + "\n\n"
+        docs_content += doc.page_content + "\n\n"
+    print(docs_headers)
+
+    # Add context snippets to the system prompt
+    system_prompt = chatlog[0]['content'].format(docs_content)
+    chatlog[0] = {'role': 'system', 'content': system_prompt}
+    print('System prompt: ' + chatlog[0]['content'])
+
+    params = {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "messages": chatlog,
+    }
 
     return {
-        "data": openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            temperature=0,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            messages=chatlog,
-        )
+        "data": openai.ChatCompletion.create(**params)
     }
 
 

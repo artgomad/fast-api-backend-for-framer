@@ -8,7 +8,7 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
 
 1. Fork/Clone
 
-1. Run the server-side FastAPI app in one terminal window:
+2. Run the server-side FastAPI app in one terminal window:
 
     ```sh
     $ cd backend
@@ -20,7 +20,14 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
 
     Navigate to [http://localhost:8000](http://localhost:8000)
 
-1. Run the client-side React app in a different terminal window:
+3. Initialise your OpenAI API key by writing this in your backend terminal:
+
+    ```sh
+    $ cd backend
+    $ export OPENAI_API_KEY="your-key"
+    ```
+
+4. Run the client-side React app in a different terminal window:
 
     ```sh
     $ cd frontend
