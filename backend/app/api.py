@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import openai
+from dotenv import load_dotenv
 import os
 import pickle
 
@@ -19,6 +20,7 @@ todos = [
 
 app = FastAPI()
 
+load_dotenv()
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
 origins = [
