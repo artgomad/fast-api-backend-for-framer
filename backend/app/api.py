@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import openai
 import os
 import pickle
@@ -14,7 +15,7 @@ todos = [
         "item": "Cycle around town."
     }
 ]
-  
+
 
 app = FastAPI()
 
@@ -81,6 +82,17 @@ async def delete_todo(id: int) -> dict:
     }
 
 
+@app.options("/question", tags=["openAI"])
+async def options_handler(request: Request):
+    """Handle HTTP OPTIONS requests for /question."""
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    return JSONResponse(content={}, headers=headers)
+
+
 @app.post("/question", tags=["openAI"])
 async def openAI_chatbot(chatlog: list):
     vectorstores_dir = os.path.abspath('vectorstores')
@@ -123,4 +135,3 @@ async def openAI_chatbot(chatlog: list):
     return {
         "data": openai.ChatCompletion.create(**params)
     }
-
