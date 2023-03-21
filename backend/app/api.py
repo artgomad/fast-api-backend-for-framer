@@ -4,17 +4,6 @@ import openai
 import os
 import pickle
 
-"""
-from langchain.document_loaders import PagedPDFSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings.openai import OpenAIEmbeddings
-from dotenv import dotenv_values
-import os
-
-config = dotenv_values(".env.local")
-os.environ['OPENAI_API_KEY'] = config['OPENAI_API_KEY']
-"""
-
 todos = [
     {
         "id": "1",
@@ -135,30 +124,3 @@ async def openAI_chatbot(chatlog: list):
         "data": openai.ChatCompletion.create(**params)
     }
 
-
-"""
-loader = PagedPDFSplitter("nl-employee-handbook-local-v12-0.pdf")
-pages = loader.load_and_split()
-faiss_index = FAISS.from_documents(pages, OpenAIEmbeddings())
-
-
-@app.get("/pdf", tags=["pdf"])
-async def pdf(request: Request, question: str):
-
-    # question = "How many vacation days do I get?";
-
-    docs = faiss_index.similarity_search(question, k=2)
-
-    response = ""
-
-    print("----------------------------------------------------------------")
-    print("question: ", question)
-
-    for doc in docs:
-        print(doc.page_content)
-        response += doc.page_content
-
-    print("----------------------------------------------------------------")
-
-    return '{"success":"true", "response": %s}' % response
-"""
