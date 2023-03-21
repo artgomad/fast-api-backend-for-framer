@@ -118,7 +118,6 @@ async def openAI_chatbot(chatlog: list):
     docs_headers = ""
     docs_content = ""
     for doc in docs:
-        print(doc.metadata)
         docs_headers += "- " + doc.metadata["heading"] + "\n\n"
         docs_content += doc.page_content + "\n\n"
     print(docs_headers)
@@ -126,7 +125,7 @@ async def openAI_chatbot(chatlog: list):
     # Add context snippets to the system prompt
     system_prompt = chatlog[0]['content'].format(docs_content)
     chatlog[0] = {'role': 'system', 'content': system_prompt}
-    print('System prompt: ' + chatlog[0]['content'])
+    #print('System prompt: ' + chatlog[0]['content'])
 
     params = {
         "model": "gpt-3.5-turbo",
