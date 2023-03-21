@@ -19,6 +19,8 @@ todos = [
 
 app = FastAPI()
 
+openai.api_key = os.environ.get('OPENAI_API_KEY')
+
 origins = [
     "http://localhost:3000",
     "localhost:3000",
