@@ -85,6 +85,7 @@ async def delete_todo(id: int) -> dict:
 @app.options("/question", tags=["openAI"])
 async def options_handler(request: Request):
     """Handle HTTP OPTIONS requests for /question."""
+    print("OPTIONS request received")
     headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "*",
