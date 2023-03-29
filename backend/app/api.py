@@ -1,10 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from utils.wiki_to_csv import recursively_find_all_pages, extract_sections
 import openai
 from dotenv import load_dotenv
+import pandas as pd
 import os
 import pickle
+# import tiktoken
 
 todos = [
     {
@@ -101,9 +104,12 @@ async def options_handler(request: Request):
 @app.post("/question", tags=["openAI"])
 async def openAI_chatbot(chatlog: list):
     vectorstores_dir = os.path.abspath('vectorstores')
-    if "vectorstore_faqs_ing.pkl" in os.listdir(vectorstores_dir):
+    # vectorstore_faqs_ing.pkl
+    # olympics_sections.pkl
+    vectorstore = 'olympics_sections.pkl'
+    if vectorstore in os.listdir(vectorstores_dir):
         print("Found vectorstore in " + vectorstores_dir)
-        with open(vectorstores_dir + "/vectorstore_faqs_ing.pkl", "rb") as f:
+        with open(vectorstores_dir + "/" + vectorstore, "rb") as f:
             vectorstore = pickle.load(f)
             print("loading vectorstore...")
     else:
@@ -118,14 +124,14 @@ async def openAI_chatbot(chatlog: list):
     docs_headers = ""
     docs_content = ""
     for doc in docs:
-        docs_headers += "- " + doc.metadata["heading"] + "\n\n"
+        docs_headers += "- " + list(doc.metadata.values())[0] + ", " + list(doc.metadata.values())[1] + "\n\n"
         docs_content += doc.page_content + "\n\n"
     print(docs_headers)
 
     # Add context snippets to the system prompt
     system_prompt = chatlog[0]['content'].format(docs_content)
     chatlog[0] = {'role': 'system', 'content': system_prompt}
-    #print('System prompt: ' + chatlog[0]['content'])
+    # print('System prompt: ' + chatlog[0]['content'])
 
     params = {
         "model": "gpt-3.5-turbo",
@@ -138,4 +144,28 @@ async def openAI_chatbot(chatlog: list):
 
     return {
         "data": openai.ChatCompletion.create(**params)
+    }
+
+# To run this functio can take up to 30 minutes
+
+
+@app.post("/wiki", tags=["openAI"])
+async def wiki_search():
+    print("Starting wiki search...")
+    pages = recursively_find_all_pages(["2020 Summer Olympics"])
+    print("Pages length: ", len(pages))
+
+    res = []
+    for page in pages:
+        res += extract_sections(page.content, page.title)
+    df = pd.DataFrame(res, columns=["title", "heading", "content", "tokens"])
+    df = df[df.tokens > 40]
+    df = df.drop_duplicates(['title', 'heading'])
+    df = df.reset_index().drop('index', axis=1)  # reset index
+    df.head()
+
+    df.to_csv('../data/olympics_sections.csv', index=False)
+
+    return {
+        "data": "Done."
     }

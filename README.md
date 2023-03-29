@@ -8,13 +8,13 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
 
 1. Fork/Clone
 
-2. Run the server-side FastAPI app in one terminal window:
+2. Run the server-side FastAPI app locally from the terminal window:
 
     ```sh
     $ cd backend
-    $ python3.9 -m venv env
+    $ python3.9 -m venv env (only the first time)
     $ source env/bin/activate
-    (env)$ pip install -r requirements.txt
+    (env)$ pip install -r requirements.txt (only when requirements change)
     (env)$ python main.py
     ```
 
@@ -36,3 +36,12 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
     ```
 
     Navigate to [http://localhost:3000](http://localhost:3000)
+
+5. Debug Heroku
+
+    Heroku backend is always running. Doesn't need to be activated or deactivated
+
+    ```sh
+    $ heroku logs --tail
+    ```
+
