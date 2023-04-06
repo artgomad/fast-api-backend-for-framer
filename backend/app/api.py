@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from utils.wiki_to_csv import recursively_find_all_pages, extract_sections
@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 import pandas as pd
 import os
 import pickle
+import json
+from langchain.utilities.wolfram_alpha import WolframAlphaAPIWrapper
+from langchain.agents import AgentExecutor
+from app.agents.mortgage_agent import agent, tools
+from app.agents.callbacks.custom_callbacks import MyAgentCallback, MyAgentCallback_works
+
 # import tiktoken
 
 todos = [
@@ -20,11 +26,12 @@ todos = [
     }
 ]
 
-
 app = FastAPI()
 
 load_dotenv()
 openai.api_key = os.environ.get('OPENAI_API_KEY')
+wolframalpha_app_key = os.environ.get('WOLFRAMALPHA_APP_ID')
+serpapi_api_key = os.environ.get('SERPAPI_API_KEY')
 
 origins = [
     "http://localhost:3000",
@@ -41,6 +48,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+wolfram = WolframAlphaAPIWrapper()
 
 
 @app.get("/", tags=["root"])
@@ -124,7 +133,9 @@ async def openAI_chatbot(chatlog: list):
     docs_headers = ""
     docs_content = ""
     for doc in docs:
-        docs_headers += "- " + list(doc.metadata.values())[0] + ", " + list(doc.metadata.values())[1] + "\n\n"
+        docs_headers += "- " + \
+            list(doc.metadata.values())[0] + ", " + \
+            list(doc.metadata.values())[1] + "\n\n"
         docs_content += doc.page_content + "\n\n"
     print(docs_headers)
 
@@ -146,9 +157,164 @@ async def openAI_chatbot(chatlog: list):
         "data": openai.ChatCompletion.create(**params)
     }
 
+# @app.post("/agentCall", tags=["openAI"])
+
+"""
+TO BE DONE:
+FIX WEBSOCKET CONNECTION
+"""
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        # Process the received data from the client
+        chatlog = json.loads(data)['chatlog']
+
+        vectorstores_dir = os.path.abspath('vectorstores')
+        # vectorstore_faqs_ing.pkl
+        # olympics_sections.pkl
+        vectorstore = 'olympics_sections.pkl'
+        if vectorstore in os.listdir(vectorstores_dir):
+            print("Found vectorstore in " + vectorstores_dir)
+            with open(vectorstores_dir + "/" + vectorstore, "rb") as f:
+                vectorstore = pickle.load(f)
+                print("loading vectorstore...")
+        else:
+            print("vectorstore not found")
+
+        user_question = chatlog[-1]['content']
+        print('User question: ' + user_question)
+
+        # Get the top 5 documents from the vectorstore
+        # similarity_search() is being retreived from langchain.vectorstores.faiss
+        docs = vectorstore.similarity_search(user_question, 5)
+        docs_headers = ""
+        docs_content = ""
+        for doc in docs:
+            docs_headers += "- " + \
+                list(doc.metadata.values())[0] + ", " + \
+                list(doc.metadata.values())[1] + "\n\n"
+            docs_content += doc.page_content + "\n\n"
+        print(docs_headers)
+
+        # Add context snippets to the system prompt
+        system_prompt = chatlog[0]['content'].format(docs_content)
+        chatlog[0] = {'role': 'system', 'content': system_prompt}
+        # print('System prompt: ' + chatlog[0]['content'])
+
+        # Run agent and get last action and observation
+        callback = MyAgentCallback(websocket)
+        agent_executor = AgentExecutor.from_agent_and_tools(
+            agent=agent, tools=tools, verbose=False, callback_manager=callback, return_intermediate_steps=True,
+        )
+        agent_output = await agent_executor.acall(user_question)
+        #agent_output = agent_executor(user_question)
+        """
+        #This one works if I remove return_intermediate_steps=True from agent_executor
+        agent_output = agent_executor.run(user_question)
+        """
+
+        print('agent_input = ' + agent_output['input'])
+        print('agent_output = ' + agent_output['output'])
+        print('agent_intermediate_steps = ')
+        print(agent_output['intermediate_steps'])
+
+        """
+        if callback.last_action_text:
+            print(f"LAST ACTION: {callback.last_action_text}")
+        if callback.last_observation:
+            print(f"LAST OBSERVATION: {callback.last_observation}")
+        """
+
+        data = ""
+        try:
+            data = wolfram.run(user_question)
+            print('\n\nWolfram response:')
+            print(data)
+        except Exception as e:
+            print("Error:", e)
+
+        await websocket.send_json({
+            # "data": openai.ChatCompletion.create(**params)
+            "data":  agent_output['output'],
+            "intermediate_steps": agent_output['intermediate_steps'],
+        })
+
+
+@app.post("/agentCall", tags=["openAI"])
+async def agent_chatbot(chatlog: list):
+    vectorstores_dir = os.path.abspath('vectorstores')
+    # vectorstore_faqs_ing.pkl
+    # olympics_sections.pkl
+    vectorstore = 'olympics_sections.pkl'
+    if vectorstore in os.listdir(vectorstores_dir):
+        print("Found vectorstore in " + vectorstores_dir)
+        with open(vectorstores_dir + "/" + vectorstore, "rb") as f:
+            vectorstore = pickle.load(f)
+            print("loading vectorstore...")
+    else:
+        print("vectorstore not found")
+
+    user_question = chatlog[-1]['content']
+    print('User question: ' + user_question)
+
+    # Get the top 5 documents from the vectorstore
+    # similarity_search() is being retreived from langchain.vectorstores.faiss
+    docs = vectorstore.similarity_search(user_question, 5)
+    docs_headers = ""
+    docs_content = ""
+    for doc in docs:
+        docs_headers += "- " + \
+            list(doc.metadata.values())[0] + ", " + \
+            list(doc.metadata.values())[1] + "\n\n"
+        docs_content += doc.page_content + "\n\n"
+    print(docs_headers)
+
+    # Add context snippets to the system prompt
+    system_prompt = chatlog[0]['content'].format(docs_content)
+    chatlog[0] = {'role': 'system', 'content': system_prompt}
+    # print('System prompt: ' + chatlog[0]['content'])
+
+    # Run agent and get last action and observation
+    callback = MyAgentCallback_works()
+    agent_executor = AgentExecutor.from_agent_and_tools(
+        agent=agent, tools=tools, verbose=False, callback_manager=callback, return_intermediate_steps=True,
+    )
+    agent_output = agent_executor(user_question)
+    """
+        #This one works if I remove return_intermediate_steps=True from agent_executor
+        agent_output = agent_executor.run(user_question)
+        """
+
+    print('agent_input = ' + agent_output['input'])
+    print('agent_output = ' + agent_output['output'])
+    print('agent_intermediate_steps = ')
+    print(agent_output['intermediate_steps'])
+
+    """
+        if callback.last_action_text:
+            print(f"LAST ACTION: {callback.last_action_text}")
+        if callback.last_observation:
+            print(f"LAST OBSERVATION: {callback.last_observation}")
+        """
+
+    data = ""
+    try:
+        data = wolfram.run(user_question)
+        print('\n\nWolfram response:')
+        print(data)
+    except Exception as e:
+        print("Error:", e)
+
+    return {
+        # "data": openai.ChatCompletion.create(**params)
+        "data":  agent_output['output'],
+        "intermediate_steps": agent_output['intermediate_steps'],
+    }
+
+
 # To run this functio can take up to 30 minutes
-
-
 @app.post("/wiki", tags=["openAI"])
 async def wiki_search():
     print("Starting wiki search...")
