@@ -10,7 +10,8 @@ import pickle
 import json
 from langchain.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 from langchain.agents import AgentExecutor
-from app.agents.mortgage_agent import agent, tools
+# from app.agents.mortgage_agent import create_agent
+from app.agents.mortgage_agent_conversational import create_agent
 from app.agents.callbacks.custom_callbacks import MyAgentCallback, MyAgentCallback_works
 
 # import tiktoken
@@ -163,82 +164,34 @@ async def openAI_chatbot(chatlog: list):
 TO BE DONE:
 FIX WEBSOCKET CONNECTION
 """
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+
+    agent_executor = create_agent(websocket)
+
     while True:
         data = await websocket.receive_text()
         # Process the received data from the client
         chatlog = json.loads(data)['chatlog']
+        chatlog_strings = ""
 
-        vectorstores_dir = os.path.abspath('vectorstores')
-        # vectorstore_faqs_ing.pkl
-        # olympics_sections.pkl
-        vectorstore = 'olympics_sections.pkl'
-        if vectorstore in os.listdir(vectorstores_dir):
-            print("Found vectorstore in " + vectorstores_dir)
-            with open(vectorstores_dir + "/" + vectorstore, "rb") as f:
-                vectorstore = pickle.load(f)
-                print("loading vectorstore...")
-        else:
-            print("vectorstore not found")
+        #Format chatlog to be fed as agent memory
+        for item in chatlog:
+            chatlog_strings += item['role'] + ': ' + item['content'] + '\n'
 
         user_question = chatlog[-1]['content']
-        print('User question: ' + user_question)
 
-        # Get the top 5 documents from the vectorstore
-        # similarity_search() is being retreived from langchain.vectorstores.faiss
-        docs = vectorstore.similarity_search(user_question, 5)
-        docs_headers = ""
-        docs_content = ""
-        for doc in docs:
-            docs_headers += "- " + \
-                list(doc.metadata.values())[0] + ", " + \
-                list(doc.metadata.values())[1] + "\n\n"
-            docs_content += doc.page_content + "\n\n"
-        print(docs_headers)
+        agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
 
-        # Add context snippets to the system prompt
-        system_prompt = chatlog[0]['content'].format(docs_content)
-        chatlog[0] = {'role': 'system', 'content': system_prompt}
-        # print('System prompt: ' + chatlog[0]['content'])
-
-        # Run agent and get last action and observation
-        callback = MyAgentCallback(websocket)
-        agent_executor = AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=False, callback_manager=callback, return_intermediate_steps=True,
-        )
-        agent_output = await agent_executor.acall(user_question)
-        #agent_output = agent_executor(user_question)
-        """
-        #This one works if I remove return_intermediate_steps=True from agent_executor
-        agent_output = agent_executor.run(user_question)
-        """
-
-        print('agent_input = ' + agent_output['input'])
-        print('agent_output = ' + agent_output['output'])
-        print('agent_intermediate_steps = ')
-        print(agent_output['intermediate_steps'])
-
-        """
-        if callback.last_action_text:
-            print(f"LAST ACTION: {callback.last_action_text}")
-        if callback.last_observation:
-            print(f"LAST OBSERVATION: {callback.last_observation}")
-        """
-
-        data = ""
-        try:
-            data = wolfram.run(user_question)
-            print('\n\nWolfram response:')
-            print(data)
-        except Exception as e:
-            print("Error:", e)
+        print('agent_output = ')
+        print(agent_output['output'])
 
         await websocket.send_json({
-            # "data": openai.ChatCompletion.create(**params)
             "data":  agent_output['output'],
-            "intermediate_steps": agent_output['intermediate_steps'],
+            # "intermediate_steps": agent_output['intermediate_steps'],
         })
 
 
