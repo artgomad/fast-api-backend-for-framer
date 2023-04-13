@@ -2,10 +2,10 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessa
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
-from langchain.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 
-from app.agents.api_wrappers.ask_human_2 import AskHumanWrapper, BasicAnswer
+from app.agents.api_wrappers.ask_human import AskHumanWrapper, BasicAnswer
+from app.agents.api_wrappers.wolfram_alpha import WolframAlphaAPIWrapper
 from app.agents.callbacks.custom_callbacks import MyAgentCallback
 
 from dotenv import load_dotenv
@@ -13,7 +13,6 @@ from fastapi import WebSocket
 from typing import List, Union
 import re
 import os
-
 
 
 load_dotenv()
@@ -25,46 +24,38 @@ BLUE = "\033[34m"
 YELLOW = "\033[1;33m"
 RESET = "\033[0m"
 
-system_message = """Assistant is a large language model trained by OpenAI.
-
-Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
-
-Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
-
-Overall, Assistant is a powerful tool that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist.
-
+system_message = """You are Ben, a digital assistant from ING.
+Ben is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations on topics related to ING. 
+Ben only answers based on the context the user provides or on the output of its tools.
+Ben has access to the following tools:
 TOOLS:
 ------ 
-
-Assistant has access to the following tools:"""
+"""
 
 
 first_message_template = """
 {tools}
 
-To use a tool, please use the following format:
+**To use a tool, ALWAYS use the following format:
 ```
-Thought: you should always think about what to do, consider the context and the chat history
-Action: the action to take, should be one of [{tool_names}]
+Thought: you should always think about what to do, consider the context and the previous conversation history
+Action: the action to take, should be EXACTLY one of [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Final Answer: Answer the user's original question as Ben would do
 ```
 
-And use the following context to inform your answer:
-```
+**Use the following context to inform your answer:
 - User interest rate: 4%
-- Available loan periods for the user:  ['10 years', '15 years', '20 years', '25 years', '30 years']
-```
+- Available loan periods for the user:  10, 15, 20, 25 and 30 years
+
+**Previous conversation history:
+{chat_history}
 
 Begin!
 
-Previous conversation history:
-{chat_history}
-
-New input: {input}
 {agent_scratchpad}"""
 
 last_action_text = ""
@@ -75,7 +66,8 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     template: str
     tools: List[Tool]
 
-    def format_messages(self, **kwargs) -> str: #This should return ChatPromptTemplate
+    # This should return ChatPromptTemplate
+    def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
         intermediate_steps = kwargs.pop("intermediate_steps")
         thoughts = ""
@@ -104,13 +96,13 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         kwargs["chat_history"] = kwargs.get("chat_history", "")
 
         formatted = self.template.format(**kwargs)
-        llm_prompt_input = [SystemMessage(content=system_message),HumanMessage(content=formatted)]
+        llm_prompt_input = [SystemMessage(
+            content=system_message), HumanMessage(content=formatted)]
 
         print('FORMATED PROMPT AS RECEIVED BY THE LLM\n')
         print(llm_prompt_input)
-        
-        return [SystemMessage(content=system_message),HumanMessage(content=formatted)]
 
+        return [SystemMessage(content=system_message), HumanMessage(content=formatted)]
 
 
 class CustomOutputParser(AgentOutputParser):
@@ -127,11 +119,11 @@ class CustomOutputParser(AgentOutputParser):
                 log=llm_output,
             )
 
-        # Check if agent asked a follow-up question
-        if "Ask the user for more info" in llm_output or "llm basic answer" in llm_output:
+        # Check if agent asked a follow-up question or give a simple answer
+        if "Ask user" in llm_output or "Simple answer" in llm_output:
 
             return_values = {"output": llm_output.split(
-                "Action: Ask the user for more info\nAction Input:")[-1]}
+                "\nAction Input:")[-1]}
 
             print(f"\nFinal Answer: {GREEN}{return_values}{RESET}\n")
             return AgentFinish(
@@ -159,24 +151,32 @@ def create_agent(websocket: WebSocket):
 
     tools = [
         Tool(
-            name="Wolfram Alpha (Mortgage and loan calculator)",
+            name="Calculate loan",
             func=wolfram.run,
-            description="when you need to calculate mortgages and loans"
+            description="""
+            A loan calculator from Wolfram Alpha. Select this tool when you have enough information to make loan calculations.
+            Action Input should be in the following format: loan {loan amount}, {interest rate}, {loan period}.
+            """
         ),
         Tool(
-            name="Ask the user for more info",
+            name="Ask user",
             func=ask_human.run,
-            description="when the user has given incomplete information to be able to provide an accurate response, the chatbot can ask the user for more info"
-        ),
-        Tool(
-            name="LLM basic answer",
-            func=basic_answer.run,
-            description="when the user question can be answered with the context provided"
+            description="""
+            Select this tool if you need more information from the user to provide an answer or to use another tool.
+            """
         )
     ]
 
-    # Declare a dynamic prompt formatting class that adds tools, input, chat_history and agent_scratchpad 
-    # when its format_messages() method is called  
+    """
+        Tool(
+            name="Simple answer",
+            func=basic_answer.run,
+            description="Select this tool ONLY if there is enough information in the text below to give an answer to user's question."
+        )
+        """
+
+    # Declare a dynamic prompt formatting class that adds tools, input, chat_history and agent_scratchpad
+    # when its format_messages() method is called
     prompt = CustomPromptTemplate(
         tools=tools,
         template=first_message_template,

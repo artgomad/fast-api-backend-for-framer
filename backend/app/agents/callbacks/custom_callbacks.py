@@ -27,13 +27,18 @@ class MyAgentCallback(BaseCallbackManager):
         await self.websocket.send_json(response_data)
 
     async def async_on_agent_finish(self, finish: AgentFinish) -> Any:
-        final_answer = finish.log.split(
-                    "Action Input:")[-1].strip()
+        if 'Final Answer:' in finish.log:
+            final_answer = finish.log.split(
+                "Final Answer:")[-1].strip()
+        else:
+            final_answer = finish.log.split(
+                "Action Input:")[-1].strip()
+            
         response_data = {
-            'actions': finish.log,
+            #'actions': finish.log,
             'data': final_answer
         }
-        print(f"{GREEN}Send data on agent action to websocket: {RESET}" + final_answer)
+        print(f"{GREEN}Send data on agent finish to websocket: {RESET}" + final_answer)
         await self.websocket.send_json(response_data)
 
     def on_agent_action(self, action: AgentAction, **kwargs) -> Any:
@@ -42,7 +47,7 @@ class MyAgentCallback(BaseCallbackManager):
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs) -> Any:
         # print('Final observation: ' +finish.log)
-        #return {"last_observation": finish.log}
+        # return {"last_observation": finish.log}
         asyncio.create_task(self.async_on_agent_finish(finish))
 
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs) -> Any:
