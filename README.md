@@ -12,7 +12,7 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
 
     ```sh
     $ cd backend
-    $ python3.9 -m venv env (only the first time)
+    $ python3 -m venv env (only the first time)
     $ source env/bin/activate
     (env)$ pip install -r requirements.txt (only when requirements change)
     (env)$ python main.py
@@ -26,22 +26,3 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
     $ cd backend
     $ export OPENAI_API_KEY="your-key"
     ```
-
-4. Run the client-side React app in a different terminal window:
-
-    ```sh
-    $ cd frontend
-    $ npm install
-    $ npm run start
-    ```
-
-    Navigate to [http://localhost:3000](http://localhost:3000)
-
-5. Debug Heroku
-
-    Heroku backend is always running. Doesn't need to be activated or deactivated
-
-    ```sh
-    $ heroku logs --tail
-    ```
-

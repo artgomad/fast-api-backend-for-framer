@@ -50,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-wolfram = WolframAlphaAPIWrapper()
+# wolfram = WolframAlphaAPIWrapper()
 
 
 @app.get("/", tags=["root"])
@@ -254,9 +254,9 @@ async def agent_chatbot(chatlog: list):
 
     data = ""
     try:
-        data = wolfram.run(user_question)
+        # data = wolfram.run(user_question)
         print('\n\nWolfram response:')
-        print(data)
+        # print(data)
     except Exception as e:
         print("Error:", e)
 

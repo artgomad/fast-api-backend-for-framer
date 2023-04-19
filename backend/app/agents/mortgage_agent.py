@@ -21,18 +21,19 @@ RESET = "\033[0m"
 
 # Define which tools the agent can use to answer user queries
 search = SerpAPIWrapper()
-wolfram = WolframAlphaAPIWrapper()
+# wolfram = WolframAlphaAPIWrapper()
 tools = [
     Tool(
         name="Search",
         func=search.run,
         description="useful for when you need to answer questions about current events"
-    ),
-    Tool(
-        name="Calculate",
-        func=wolfram.run,
-        description="useful for when you need to make mathematical operations"
     )
+    #,
+    # Tool(
+    #     name="Calculate",
+    #     func=wolfram.run,
+    #     description="useful for when you need to make mathematical operations"
+    # )
 ]
 
 # Set up the base template
@@ -74,14 +75,14 @@ class CustomPromptTemplate(StringPromptTemplate):
         for action, observation in intermediate_steps:
             thoughts += action.log
             thoughts += f"\nObservation: {observation}\nThought: "
-        
+
         #Get the last item of the intermediate steps
         if intermediate_steps:
             last_action, last_observation = intermediate_steps[-1]
             last_action_text = last_action.log
             print(f"\nThought: {YELLOW}{last_action_text}{RESET}\n")
             print(f"\nObservation: {BLUE}{last_observation}{RESET}\n")
-            
+
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         # Create a tools variable from the list of tools provided

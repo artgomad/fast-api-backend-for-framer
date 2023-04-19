@@ -25,11 +25,11 @@ YELLOW = "\033[1;33m"
 RESET = "\033[0m"
 
 system_message = """You are Ben, a digital assistant from ING.
-Ben is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations on topics related to ING. 
+Ben is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations on topics related to ING.
 Ben only answers based on the context the user provides or on the output of its tools.
 Ben has access to the following tools:
 TOOLS:
------- 
+------
 """
 
 
@@ -145,19 +145,19 @@ class CustomOutputParser(AgentOutputParser):
 
 def create_agent(websocket: WebSocket):
     # Define which tools the agent can use to answer user queries
-    wolfram = WolframAlphaAPIWrapper()
+    # wolfram = WolframAlphaAPIWrapper()
     ask_human = AskHumanWrapper()
     basic_answer = BasicAnswer()
 
     tools = [
-        Tool(
-            name="Calculate loan",
-            func=wolfram.run,
-            description="""
-            A loan calculator from Wolfram Alpha. Select this tool when you have enough information to make loan calculations.
-            Action Input should be in the following format: loan {loan amount}, {interest rate}, {loan period}.
-            """
-        ),
+        # Tool(
+        #     name="Calculate loan",
+        #     func=wolfram.run,
+        #     description="""
+        #     A loan calculator from Wolfram Alpha. Select this tool when you have enough information to make loan calculations.
+        #     Action Input should be in the following format: loan {loan amount}, {interest rate}, {loan period}.
+        #     """
+        # ),
         Tool(
             name="Ask user",
             func=ask_human.run,
