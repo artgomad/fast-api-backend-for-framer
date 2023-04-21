@@ -59,8 +59,7 @@ Let's look at the key scripts that make the repo work:
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
     ```
-    
-3.**Agent definition:** The websocket endpoint creates and runs and agent defined in 
+3. **Agent definition:** The websocket endpoint creates and runs and agent defined in 
     [/backend/app/agents/mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
     
     ```python
