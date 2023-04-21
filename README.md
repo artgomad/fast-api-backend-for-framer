@@ -53,12 +53,20 @@ Let's look at the key scripts that make the repo work:
 1. **Main:** Runs the application, defining the port where the application runs either locally or with Heroku.
     [/backend/main.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/main.py)
 
-3. **API definition:** Defines the API calls that can be called in the front end, using Fast API. We are going to use a Websocket endpoint.
+2. **API definition:** Defines the API calls that can be called in the front end, using Fast API. We are going to use a Websocket endpoint.
     [/backend/app/api.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/api.py)
     ```python
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
     ```
     
-2.
+3.**Agent definition:** The websocket endpoint creates and runs and agent defined in 
+    [/backend/app/agents/mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
+    ```python
+    from app.agents.mortgage_agent_conversational import create_agent
+    ...
+    agent_executor = create_agent(websocket)
+    ...
+    agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
+    ```
 
