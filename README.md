@@ -92,48 +92,48 @@ Let's look at the key scripts that make the repo work:
     An LLM agent consists of 4 parts:
     - **CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
     
-    ```python
-    class CustomPromptTemplate(BaseChatPromptTemplate):
-        template: str
-        tools: List[Tool]
+        ```python
+        class CustomPromptTemplate(BaseChatPromptTemplate):
+            template: str
+            tools: List[Tool]
         
-        def format_messages(self, **kwargs) -> str:
-        #...
-    ```
+            def format_messages(self, **kwargs) -> str:
+            #...
+        ```
     - **LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
     
-    ```python
-    prompt = CustomPromptTemplate(
-        tools=tools,
-        template=first_message_template,
-        input_variables=["input", "chat_history", "intermediate_steps"],
-    )
+        ```python
+        prompt = CustomPromptTemplate(
+            tools=tools,
+            template=first_message_template,
+            input_variables=["input", "chat_history", "intermediate_steps"],
+        )
 
-    llm = ChatOpenAI(temperature=0, model='gpt-3.5-turbo')
+        llm = ChatOpenAI(temperature=0, model='gpt-3.5-turbo')
 
-    # Declare a chain that will trigger an openAI completion with the given prompt
-    llm_chain = LLMChain(
-        llm=llm,
-        prompt=prompt,
-    )
-    ```
+        # Declare a chain that will trigger an openAI completion with the given prompt
+        llm_chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+        )
+        ```
     - **Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
 
-    ```python
-    agent_chain = LLMSingleActionAgent(
-        llm_chain=llm_chain,
-        output_parser=output_parser,
-        stop=["\nObservation:"],
-        allowed_tools=tool_names
-    )
-    ```
+        ```python
+        agent_chain = LLMSingleActionAgent(
+            llm_chain=llm_chain,
+            output_parser=output_parser,
+            stop=["\nObservation:"],
+            allowed_tools=tool_names
+        )
+        ```
     - **CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
 
-    ```python
-    class CustomOutputParser(AgentOutputParser):
-        def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
-        #...
-    ```
+        ```python
+        class CustomOutputParser(AgentOutputParser):
+            def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
+            #...
+        ```
 
     The LLMAgent is used in an **AgentExecutor**. This AgentExecutor can largely be thought of as a loop that:
     - Passes user input and any previous steps to the Agent (in this case, the LLMAgent)
@@ -145,11 +145,3 @@ Let's look at the key scripts that make the repo work:
     AgentAction is a response that consists of action and action_input. action refers to which tool to use, and action_input refers to the input to that tool. log can also be provided as more context (that can be used for logging, tracing, etc).
 
     AgentFinish is a response that contains the final message to be sent back to the user. This should be used to end an agent run.
-
-    
-    ```python
-    
-    #...
-    
-    ```
-
