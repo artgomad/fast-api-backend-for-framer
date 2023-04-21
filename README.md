@@ -59,15 +59,40 @@ Let's look at the key scripts that make the repo work:
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
     ```
+    The websocket endpoint recieves the chatlog data from the frontend and returns the output of the LLM agent
+    ```python
+    #...
+    while True:
+        data = await websocket.receive_text()
+        # Process the received data from the client
+        chatlog = json.loads(data)['chatlog']
+        
+        #...
+        
+        await websocket.send_json({
+            "data":  agent_output['output'],
+            # "intermediate_steps": agent_output['intermediate_steps'],
+        })
+    ```
     
-3. **Agent definition:** The websocket endpoint creates and runs and agent defined in 
+    The websocket endpoint creates and runs and agent defined in [mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
+    
+    ```python
+    from app.agents.mortgage_agent_conversational import create_agent
+    #...
+    agent_executor = create_agent(websocket)
+    #...
+    agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
+    ```
+    
+4. **Agent definition:** The websocket endpoint creates and runs and agent defined in 
     [/backend/app/agents/mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
     
     ```python
     from app.agents.mortgage_agent_conversational import create_agent
-    
+    #...
     agent_executor = create_agent(websocket)
-    
+    #...
     agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
     ```
 
