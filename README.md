@@ -91,6 +91,11 @@ Let's look at the key scripts that make the repo work:
     
     An LLM agent consists of three parts:
     - **CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
+    ```
+    class CustomPromptTemplate(BaseChatPromptTemplate):
+    template: str
+    tools: List[Tool]
+    ```
     - **LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
     - **Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
     - **CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
