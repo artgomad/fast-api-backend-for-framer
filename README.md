@@ -90,10 +90,10 @@ Let's look at the key scripts that make the repo work:
     To learn more about langchain agents check [here](https://python.langchain.com/en/latest/modules/agents/agents/custom_llm_agent.html)
     
     An LLM agent consists of three parts:
-    **- CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
-    **- LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
-    **- Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
-    **- CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
+    - **CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
+    - **LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
+    - **Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
+    - **CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
 
     The LLMAgent is used in an **AgentExecutor**. This AgentExecutor can largely be thought of as a loop that:
     - Passes user input and any previous steps to the Agent (in this case, the LLMAgent)
