@@ -50,15 +50,15 @@ Check out the [post](https://testdriven.io/blog/fastapi-react/).
 
 Let's look at the key scripts that make the repo work:
 
-1. Main: Runs the application, defining the port where the application runs either locally or with Heroku.
+1. **Main:** Runs the application, defining the port where the application runs either locally or with Heroku.
     [/backend/main.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/main.py)
 
-3. API definition: Defines the API calls that can be called in the front end, using Fast API. We are going to use a Websocket endpoint.
+3. **API definition:** Defines the API calls that can be called in the front end, using Fast API. We are going to use a Websocket endpoint.
     [/backend/app/api.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/api.py)
-```
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-```
+    ```python
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket):
+    ```
     
 2.
 
