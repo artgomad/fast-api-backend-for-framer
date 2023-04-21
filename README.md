@@ -75,7 +75,7 @@ Let's look at the key scripts that make the repo work:
         })
     ```
     
-    The websocket endpoint creates and runs and agent defined in [mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
+    The agent is defined in [mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py) and gets the chat history as input
     
     ```python
     from app.agents.mortgage_agent_conversational import create_agent
@@ -85,14 +85,31 @@ Let's look at the key scripts that make the repo work:
     agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
     ```
     
-4. **Agent definition:** The websocket endpoint creates and runs and agent defined in 
+3. **Agent definition:** The agent is defined in
     [/backend/app/agents/mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
+    To learn more about langchain agents check [here](https://python.langchain.com/en/latest/modules/agents/agents/custom_llm_agent.html)
+    
+    An LLM agent consists of three parts:
+    **- CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
+    **- LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
+    **- Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
+    **- CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
+
+    The LLMAgent is used in an **AgentExecutor**. This AgentExecutor can largely be thought of as a loop that:
+    - Passes user input and any previous steps to the Agent (in this case, the LLMAgent)
+    - If the Agent returns an AgentFinish, then return that directly to the user
+    - If the Agent returns an AgentAction, then use that to call a tool and get an Observation
+    - Repeat, passing the AgentAction and Observation back to the Agent until an AgentFinish is emitted.
+
+
+    AgentAction is a response that consists of action and action_input. action refers to which tool to use, and action_input refers to the input to that tool. log can also be provided as more context (that can be used for logging, tracing, etc).
+
+    AgentFinish is a response that contains the final message to be sent back to the user. This should be used to end an agent run.
+
     
     ```python
-    from app.agents.mortgage_agent_conversational import create_agent
+    
     #...
-    agent_executor = create_agent(websocket)
-    #...
-    agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
+    
     ```
 
