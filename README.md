@@ -91,6 +91,8 @@ Let's look at the key scripts that make the repo work:
     [/backend/app/agents/mortgage_agent_conversational.py](https://github.com/artgomad/fast-api-backend-for-framer/blob/main/backend/app/agents/mortgage_agent_conversational.py)
     To learn more about langchain agents check [here](https://python.langchain.com/en/latest/modules/agents/agents/custom_llm_agent.html)
     
+ ## Langchain Agent
+ 
     An LLM agent consists of 4 parts:
     - **CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
     
