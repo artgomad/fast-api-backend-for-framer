@@ -92,7 +92,7 @@ Let's look at the key scripts that make the repo work:
     
  ## Langchain Agent
  
-    An LLM agent consists of 4 parts:
+ An LLM agent consists of 4 parts:
     - **CustomPromptTemplate:** This class adds the conversation history, tools and tool names to the prompt that will instruct the language model on what to do. 
     
         ```python
