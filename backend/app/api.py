@@ -6,12 +6,17 @@ import openai
 from dotenv import load_dotenv
 import pandas as pd
 import os
+import urllib.request
+import requests
 import pickle
 import json
 from langchain.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 from langchain.agents import AgentExecutor
 # from app.agents.mortgage_agent import create_agent
-from app.agents.mortgage_agent_conversational import create_agent
+# from app.agents.mortgage_agent_conversational import create_agent
+from app.agents.mortgage_agent_conversational_test import create_agent
+from app.agents.followup_question_agent import create_followup_question_agent
+from app.agents.insight_gatherer_agent import create_insights_agent
 from app.agents.callbacks.custom_callbacks import MyAgentCallback, MyAgentCallback_works
 
 # import tiktoken
@@ -158,19 +163,12 @@ async def openAI_chatbot(chatlog: list):
         "data": openai.ChatCompletion.create(**params)
     }
 
-# @app.post("/agentCall", tags=["openAI"])
-
-"""
-TO BE DONE:
-FIX WEBSOCKET CONNECTION
-"""
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    agent_executor = create_agent(websocket)
+    # agent_executor = create_agent(websocket)
 
     while True:
         data = await websocket.receive_text()
@@ -178,11 +176,15 @@ async def websocket_endpoint(websocket: WebSocket):
         chatlog = json.loads(data)['chatlog']
         chatlog_strings = ""
 
-        #Format chatlog to be fed as agent memory
+        # Format chatlog to be fed as agent memory
         for item in chatlog:
             chatlog_strings += item['role'] + ': ' + item['content'] + '\n'
 
         user_question = chatlog[-1]['content']
+
+        # Added this new
+        agent_executor = create_agent(
+            websocket=websocket, chatlog=chatlog_strings)
 
         agent_output = await agent_executor.acall({'input': user_question, 'chat_history': chatlog_strings})
 
@@ -195,79 +197,73 @@ async def websocket_endpoint(websocket: WebSocket):
         })
 
 
-@app.post("/agentCall", tags=["openAI"])
-async def agent_chatbot(chatlog: list):
-    vectorstores_dir = os.path.abspath('vectorstores')
-    # vectorstore_faqs_ing.pkl
-    # olympics_sections.pkl
-    vectorstore = 'olympics_sections.pkl'
-    if vectorstore in os.listdir(vectorstores_dir):
-        print("Found vectorstore in " + vectorstores_dir)
-        with open(vectorstores_dir + "/" + vectorstore, "rb") as f:
-            vectorstore = pickle.load(f)
-            print("loading vectorstore...")
-    else:
-        print("vectorstore not found")
+@app.websocket("/ws-audio")
+async def websocket_endpoint_audio(websocket: WebSocket):
+    await websocket.accept()
 
-    user_question = chatlog[-1]['content']
-    print('User question: ' + user_question)
+    while True:
+        # Receive the JSON payload
+        payload_str = await websocket.receive_text()
+        payload = json.loads(payload_str)
+        getInsights = payload['getInsights']
 
-    # Get the top 5 documents from the vectorstore
-    # similarity_search() is being retreived from langchain.vectorstores.faiss
-    docs = vectorstore.similarity_search(user_question, 5)
-    docs_headers = ""
-    docs_content = ""
-    for doc in docs:
-        docs_headers += "- " + \
-            list(doc.metadata.values())[0] + ", " + \
-            list(doc.metadata.values())[1] + "\n\n"
-        docs_content += doc.page_content + "\n\n"
-    print(docs_headers)
+        print(getInsights)
 
-    # Add context snippets to the system prompt
-    system_prompt = chatlog[0]['content'].format(docs_content)
-    chatlog[0] = {'role': 'system', 'content': system_prompt}
-    # print('System prompt: ' + chatlog[0]['content'])
+        # Receive the binary audio data
+        audio_data = await websocket.receive_bytes()
+        # Process the received data from the client
+        if audio_data:
+            audio_dir = os.path.abspath('data/audio_files')
+            filename = "audio.webm"
 
-    # Run agent and get last action and observation
-    callback = MyAgentCallback_works()
-    agent_executor = AgentExecutor.from_agent_and_tools(
-        agent=agent, tools=tools, verbose=False, callback_manager=callback, return_intermediate_steps=True,
-    )
-    agent_output = agent_executor(user_question)
-    """
-        #This one works if I remove return_intermediate_steps=True from agent_executor
-        agent_output = agent_executor.run(user_question)
-        """
+            with open(os.path.join(audio_dir, filename), "wb") as f:
+                f.write(audio_data)
+                print(f"Saved audio file to {filename}")
 
-    print('agent_input = ' + agent_output['input'])
-    print('agent_output = ' + agent_output['output'])
-    print('agent_intermediate_steps = ')
-    print(agent_output['intermediate_steps'])
+            audio_file = open(os.path.join(audio_dir, filename), "rb")
+            transcript = openai.Audio.transcribe("whisper-1", audio_file)
+            print(transcript)
 
-    """
-        if callback.last_action_text:
-            print(f"LAST ACTION: {callback.last_action_text}")
-        if callback.last_observation:
-            print(f"LAST OBSERVATION: {callback.last_observation}")
-        """
+            if getInsights == False:
+                llm_chain = create_followup_question_agent()
 
-    data = ""
-    try:
-        data = wolfram.run(user_question)
-        print('\n\nWolfram response:')
-        print(data)
-    except Exception as e:
-        print("Error:", e)
+                chain_output = await llm_chain.arun({'insights': [], 'transcript': transcript.text})
 
-    return {
-        # "data": openai.ChatCompletion.create(**params)
-        "data":  agent_output['output'],
-        "intermediate_steps": agent_output['intermediate_steps'],
-    }
+                print('agent_output (follow-up)= ')
+                print(chain_output)
+            else:
+                llm_chain = create_insights_agent()
 
+                #full_prompt = transcript.text + "\n\n" + previous_transcript
+                full_prompt = transcript.text
+
+                chain_output = await llm_chain.arun({'insights': [],'transcript': full_prompt})
+
+                print('agent_output (insights) = ')
+                print(chain_output)
+
+
+        else:
+            print("Received invalid payload")
+
+        # Send a response back to the client
+        await websocket.send_json({"data": chain_output, "returningInsights": getInsights})
+
+"""
+if transcript_finished:
+
+            llm_chain = create_insights_agent()
+
+            full_prompt = transcript.text + "\n\n" + previous_transcript
+
+            chain_output = await llm_chain.arun({'transcript': full_prompt})
+
+            print('agent_output (insights) = ')
+            print(chain_output)"""
 
 # To run this functio can take up to 30 minutes
+
+
 @app.post("/wiki", tags=["openAI"])
 async def wiki_search():
     print("Starting wiki search...")
