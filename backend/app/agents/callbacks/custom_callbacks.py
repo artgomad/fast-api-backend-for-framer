@@ -30,12 +30,16 @@ class MyAgentCallback(BaseCallbackManager):
         if 'Final Answer:' in finish.log:
             final_answer = finish.log.split(
                 "Final Answer:")[-1].strip()
+            thoughts = finish.log.split(
+                "Final Answer:")[0].strip()
         else:
             final_answer = finish.log.split(
                 "Action Input:")[-1].strip()
-            
+            thoughts = finish.log.split(
+                "Action Input:")[0].strip()
+
         response_data = {
-            #'actions': finish.log,
+            'actions': thoughts,
             'data': final_answer
         }
         print(f"{GREEN}Send data on agent finish to websocket: {RESET}" + final_answer)

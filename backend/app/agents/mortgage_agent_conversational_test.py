@@ -5,7 +5,7 @@ from langchain import LLMChain
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 
 from app.agents.api_wrappers.ask_human import AskHumanWrapper, BasicAnswer
-from app.agents.api_wrappers.wolfram_alpha import WolframAlphaAPIWrapper
+from app.agents.api_wrappers.wolfram_alpha_withLLM import WolframAlphaAPIWrapper
 from app.agents.api_wrappers.qa_retrieval import Qa_RetrievalWrapper
 from app.agents.callbacks.custom_callbacks import MyAgentCallback
 
@@ -25,6 +25,12 @@ BLUE = "\033[34m"
 YELLOW = "\033[1;33m"
 RESET = "\033[0m"
 
+context_external_sources = """
+- Max loan amount: 200000
+- User interest rate: 4%
+- Available loan periods for the user:  10, 15, 20 years
+"""
+
 system_message = """You are Ben, a digital assistant from ING.
 Ben is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations on topics related to ING. 
 Ben only answers based on the context the user provides or on the output of its tools.
@@ -39,24 +45,19 @@ first_message_template = """
 
 **To use a tool, ALWAYS use the following format:
 ```
-Question: the last question user asked
 Thought: you should always think about what to do, consider the context and the previous conversation history
 Action: the action to take, should be EXACTLY one of [{tool_names}]
-Action Input: the input to the action
+Action Input: always give an input to the action 
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: Answer the user's original question as Ben would do
+Thought: I have enough information to answer the user
+Final Answer: The answer the last user question as Ben would answer
 ```
-
-**Use the following context to inform your answer:
-- User interest rate: 4%
-- Available loan periods for the user:  10, 15, 20 years
 
 **Previous conversation history:
 {chat_history}
 
-Begin!
+Begin! And remember, always follow the Thought/Action/Action Input/Observation sequence without missing any step.
 
 {agent_scratchpad}"""
 
@@ -109,8 +110,9 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
 
 class CustomOutputParser(AgentOutputParser):
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
-        print(f"\nThought: {YELLOW}{llm_output}{RESET}\n")
+        print(f"\n{YELLOW}{llm_output}{RESET}\n")
 
+        #I removed this part and I'm handeling it as a tool instead
         # Check if agent should finish
         if "Final Answer:" in llm_output:
             return AgentFinish(
@@ -122,7 +124,7 @@ class CustomOutputParser(AgentOutputParser):
             )
 
         # Check if agent asked a follow-up question or give a simple answer
-        if "Ask user" in llm_output or "Simple answer" in llm_output:
+        if "Ask user" in llm_output or "Answer user" in llm_output:
 
             return_values = {"output": llm_output.split(
                 "\nAction Input:")[-1]}
@@ -134,7 +136,7 @@ class CustomOutputParser(AgentOutputParser):
             )
 
         # Parse out the action and action input
-        regex = r"Action: (.*?)[\n]*Action Input:[\s]*(.*)"
+        regex = r"Action: (.*?)[\r\n]+Action Input:[\s]*(.*)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
@@ -145,27 +147,20 @@ class CustomOutputParser(AgentOutputParser):
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 
-def create_agent(websocket: WebSocket):
+def create_agent(websocket: WebSocket, chatlog: str):
     # Define which tools the agent can use to answer user queries
-    wolfram = WolframAlphaAPIWrapper()
+    wolfram = WolframAlphaAPIWrapper(context=context_external_sources, chatlog=chatlog) 
     ask_human = AskHumanWrapper()
     olympics_qa = Qa_RetrievalWrapper()
     basic_answer = BasicAnswer()
 
     tools = [
         Tool(
-            name="Calculate loan",
+            name="Wolfram Alpha loan calculator", #Calculate loan
             func=wolfram.run,
             description="""
-            A loan calculator from Wolfram Alpha. Select this tool when you have enough information to make loan calculations.
-            Action Input should be in the following format: loan {loan amount}EUR, {interest rate}%, {loan period}years.
-            """
-        ),
-        Tool(
-            name="Ask user",
-            func=ask_human.run,
-            description="""
-            Select this tool if you need more information from the user to provide an answer or to use another tool.
+            Use this tool when you want to make calculations on loans and mortgages. 
+            Input should be the EXACTLY the same as the user's query.
             """
         ),
         Tool(
@@ -176,6 +171,22 @@ def create_agent(websocket: WebSocket):
             Input should be a fully formed question.
             """
         ),
+        Tool(
+            name="Answer user",
+            func=basic_answer.run,
+            description="""
+            Use this tool when you have enough information to answer the user question
+            Input should be the answer to user's question
+            """
+        ),
+        Tool(
+            name="Ask user",
+            func=ask_human.run,
+            description="""
+            Select this tool if you need more information from the user to provide to a tool.
+            Input should be a follow-up question for the user.
+            """
+        ),
     ]
 
     """
@@ -183,6 +194,15 @@ def create_agent(websocket: WebSocket):
             name="Simple answer",
             func=basic_answer.run,
             description="Select this tool ONLY if there is enough information in the text below to give an answer to user's question."
+        )
+
+        Tool(
+            name="Calculate loan",
+            func=wolfram.run,
+            description="
+            A loan calculator from Wolfram Alpha. Select this tool when you have enough information to make loan calculations.
+            Action Input should be in the following format: loan {loan amount}EUR, {interest rate}%, {loan period}years.
+            "
         )
         """
 

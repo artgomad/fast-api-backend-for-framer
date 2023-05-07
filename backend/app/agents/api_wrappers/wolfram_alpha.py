@@ -52,7 +52,6 @@ class WolframAlphaAPIWrapper(BaseModel):
     def run(self, query: str) -> str:
         """Run query through WolframAlpha and parse result."""
         # Identify necesary variables for a succesful wolframAPI call
-        #MAYBE ADD AN LLM CALL HERE TO MAKE SURE THE QUERY IS VALID
         
         res = self.wolfram_client.query(query)
 
