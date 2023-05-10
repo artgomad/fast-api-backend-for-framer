@@ -103,7 +103,7 @@ Let's look at the key scripts that make the repo work:
             def format_messages(self, **kwargs) -> str:
             #...
         ```
-    - **LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
+   - **LlmChain:** This is a call to the defined language model, that sends the prompt as input and returns an text output
     
         ```python
         prompt = CustomPromptTemplate(
@@ -120,7 +120,7 @@ Let's look at the key scripts that make the repo work:
             prompt=prompt,
         )
         ```
-    - **Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
+   - **Stop sequence:** Instructs the LLM to stop generating as soon as this string is found
 
         ```python
         agent_chain = LLMSingleActionAgent(
@@ -130,7 +130,7 @@ Let's look at the key scripts that make the repo work:
             allowed_tools=tool_names
         )
         ```
-    - **CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
+   - **CustomOutputParser:** This determines how to parse the LLMOutput into an AgentAction or AgentFinish object
 
         ```python
         class CustomOutputParser(AgentOutputParser):
@@ -138,7 +138,7 @@ Let's look at the key scripts that make the repo work:
             #...
         ```
 
-    The LLMAgent is used in an **AgentExecutor**. This AgentExecutor can largely be thought of as a loop that:
+   The LLMAgent is used in an **AgentExecutor**. This AgentExecutor can largely be thought of as a loop that:
     - Passes user input and any previous steps to the Agent (in this case, the LLMAgent)
     - If the Agent returns an AgentFinish, then return that directly to the user
     - If the Agent returns an AgentAction, then use that to call a tool and get an Observation
