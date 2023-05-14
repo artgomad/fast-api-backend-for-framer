@@ -7,8 +7,7 @@ from langchain.schema import AgentAction, AgentFinish, LLMResult
 from langchain.callbacks.base import BaseCallbackHandler, BaseCallbackManager
 from typing import List, Union, Any, Dict
 from app.agents.callbacks.custom_callbacks import MyAgentCallback
-from app.agents.api_wrappers.ask_human import AskHumanWrapper
-from app.agents.api_wrappers.ask_human_2 import AskHumanWrapper, BasicAnswer
+from app.agents.tools.ask_human import AskHumanWrapper
 from fastapi import WebSocket
 import re
 from dotenv import load_dotenv

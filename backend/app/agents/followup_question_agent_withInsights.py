@@ -21,23 +21,32 @@ system_message = """
 You are a qualitative researcher conducting a user test in the following context:
 {context}
 
+As a qualitative user researcher, your goal is to find answers to the research questions by asking pertinent follow-up questions.
+The following guidelines may help you ask more effective questions:
+- Prioritise the research objectives
+- Ask open-ended questions
+- Avoid leading questions
+- Ask clear and easy to understand questions
+- Probe for elaboration
+
 The research questions of the study are:
 {research_questions}
+
+These are some relevant insights you have collected from other sessions:
+{insights}
 
 Come up with {n_questions} follow-up question(s) to ask the user based on the transcript provided. The questions should address different topics to maximize insight generation.
 """
 
-multiple_shot_prompting = """
-EXAMPLE USER TRANSCRIPT:
-User: "I'm not sure what this 'comprehensive coverage' means, and I don't know if I need all these extras. The price seems reasonable, but I'm a bit confused about the whole process."
-
-EXAMPLE OF FOLLOW-UP QUESTIONS:
-- Can you explain which part of the process you find confusing?
-- What do you think 'comprehensive coverage' includes?
-- Do you feel that the pricing and coverage options available provide a good value for the cost, or are there any aspects that make it difficult to determine if you're getting a good deal?
-
-Now, generate follow-up questions based on the provided user transcript.
-USER TRANSCRIPT:
+#POTENTIAL ADDITION:
+"""
+As a qualitative user researcher, your goal is to find answers to the research questions by asking pertinent follow-up questions.
+The following guidelines may help you ask more effective questions:
+- Prioritise the research objectives
+- Ask open-ended questions
+- Avoid leading questions
+- Ask clear and easy to understand questions
+- Probe for elaboration
 """
 
 
@@ -50,6 +59,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         kwargs["n_questions"] = kwargs.get("n_questions", "")
         kwargs["research_questions"] = kwargs.get("research_questions", "")
         kwargs["context"] = kwargs.get("context", "")
+        kwargs["insights"] = kwargs.get("insights", "")
         kwargs["transcript"] = kwargs.get("transcript", "")
 
         formatted_system_message = system_message.format(**kwargs)
@@ -64,7 +74,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         return llm_prompt_input
 
 
-def create_followup_question_agent():
+def create_followup_question_agent_withInsights():
     # Declare a dynamic prompt formatting class that adds tools, input, chat_history
     prompt = CustomPromptTemplate(
         template=system_message,
@@ -72,6 +82,7 @@ def create_followup_question_agent():
             "n_questions",
             "research_questions",
             "context",
+            "insights",
             "transcript"],
     )
 
