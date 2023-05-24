@@ -4,9 +4,9 @@ from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 
-from app.agents.api_wrappers.ask_human import AskHumanWrapper, BasicAnswer
-from app.agents.api_wrappers.wolfram_alpha import WolframAlphaAPIWrapper
-from app.agents.api_wrappers.qa_retrieval import Qa_RetrievalWrapper
+from app.agents.tools.ask_human import AskHumanWrapper, BasicAnswer
+from app.agents.tools.wolfram_alpha import WolframAlphaAPIWrapper
+from app.agents.tools.qa_retrieval import Qa_RetrievalWrapper
 from app.agents.callbacks.custom_callbacks import MyAgentCallback
 
 from dotenv import load_dotenv

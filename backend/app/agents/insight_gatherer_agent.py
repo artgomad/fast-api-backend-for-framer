@@ -4,7 +4,6 @@ from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 RED = "\033[1;31m"
@@ -14,39 +13,37 @@ YELLOW = "\033[1;33m"
 RESET = "\033[0m"
 
 user_message = """
-{transcript}
+**TRANSCRIPT:**
+* Participant: {transcript}
+
+* Interviewer: {question1}
+
+* Participant: {answer1}
+
+* Interviewer: {question2}
+
+* Participant: {answer2}
+
+* Interviewer: {question3}
+
+* Participant: {answer3}
 """
 
 system_message = """
-You are a qualitative research assistant. Your goal is to gather insights on the Rearch Questions below from a given user transcript.
-
-INSTRUCTIONS:
-- The maximum amount of insights you can generate from a transcript is 3
-- The minimum amount of insights you can generate from a transcript 1
-
-CONTEXT OF THE TRANSCRIPT:
-The user is looking at the coverage screen of a car insurance booking flow.
+You are a qualitative research assistant. Your goal is to gather observations from a given user transcript.
+The goal of the research study is to gather insights around the following research questions.
 
 RESEARCH QUESTIONS:
-- Do users understand all the steps?
-- What concepts presented on the screen confuse users?
-- Do users perceive they are getting a good deal?
+{research_questions}
 
-ALREADY COLLECTED INSIGHTS:
-{insights}
-"""
+INSTRUCTIONS:
+- The maximum amount of observations you can generate from a transcript is 3
+- The minimum amount of observations you can generate from a transcript 1
+- Format each observations EXACTLY like this: "- {{observations}}" 
 
-multiple_shot_prompting = """
-EXAMPLE USER TRANSCRIPT:
-User: "I'm not sure what this 'comprehensive coverage' means, and I don't know if I need all these extras. The price seems reasonable, but I'm a bit confused about the whole process."
+CONTEXT OF THE TRANSCRIPT:
+{context}
 
-EXAMPLE OF FOLLOW-UP QUESTIONS:
-- Can you explain which part of the process you find confusing?
-- What do you think 'comprehensive coverage' includes?
-- Do you feel that the pricing and coverage options available provide a good value for the cost, or are there any aspects that make it difficult to determine if you're getting a good deal?
-
-Now, generate follow-up questions based on the provided user transcript.
-USER TRANSCRIPT:
 """
 
 
@@ -56,8 +53,18 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     # This should return ChatPromptTemplate
     def format_messages(self, **kwargs) -> str:
         # Add input_variables to kwargs
-        kwargs["insights"] = kwargs.get("insights", "")
         kwargs["transcript"] = kwargs.get("transcript", "")
+        kwargs["question1"] = kwargs.get(
+            "followup_questions", {}).get("question1", "")
+        kwargs["question2"] = kwargs.get(
+            "followup_questions", {}).get("question2", "")
+        kwargs["question3"] = kwargs.get(
+            "followup_questions", {}).get("question3", "")
+        kwargs["answer1"] = kwargs.get("user_answers", {}).get("answer1", "")
+        kwargs["answer2"] = kwargs.get("user_answers", {}).get("answer2", "")
+        kwargs["answer3"] = kwargs.get("user_answers", {}).get("answer3", "")
+        kwargs["research_questions"] = kwargs.get("research_questions", "")
+        kwargs["context"] = kwargs.get("context", "")
 
         formatted_system_message = system_message.format(**kwargs)
         formatted_user_message = user_message.format(**kwargs)
@@ -75,7 +82,8 @@ def create_insights_agent():
     # Declare a dynamic prompt formatting class that adds tools, input, chat_history
     prompt = CustomPromptTemplate(
         template=system_message,
-        input_variables=["insights", "transcript"],
+        input_variables=["transcript", "research_questions",
+                         "context", "followup_questions", "user_answers"],
     )
 
     llm = ChatOpenAI(temperature=0.7, model='gpt-4')
