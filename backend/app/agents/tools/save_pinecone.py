@@ -46,7 +46,7 @@ class Pinecone():
         text = text.replace("\n", " ")
         return openai.Embedding.create(input=[text], model="text-embedding-ada-002")[
             "data"
-        ][0]["embeddings"]
+        ][0]["embedding"]
 
     def save(self, data, insightID, context):
         enriched_metadata = {
